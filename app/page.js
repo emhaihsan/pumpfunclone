@@ -19,6 +19,7 @@ export default function Home() {
   const [account, setAccount] = useState(null);
   const [factory, setFactory] = useState(null);
   const [fee, setFee] = useState(0);
+  const [tokens, setTokens] = useState([]);
   const [showCreate, setShowCreate] = useState(false);
 
   function toggleCreate() {
@@ -34,9 +35,28 @@ export default function Home() {
     const factoryAddress = config[network.chainId].factory.address;
     const factory = new ethers.Contract(factoryAddress, Factory, provider);
     setFactory(factory);
-    console.log(factory);
+    // Fetch the fee
     const fee = await factory.fee();
     setFee(fee);
+
+    const totalTokens = await factory.totalTokens();
+
+    const tokens = [];
+    for (let i = 0; i < totalTokens; i++) {
+      if (i == 6) break;
+      const tokenSale = await factory.getTokenSale(i);
+      const token = {
+        token: tokenSale.token,
+        name: tokenSale.name,
+        creator: tokenSale.creator,
+        sold: tokenSale.sold,
+        raised: tokenSale.raised,
+        isOpen: tokenSale.isOpen,
+        image: images[i],
+      };
+      tokens.push(token);
+    }
+    setTokens(tokens);
   }
 
   useEffect(() => {
@@ -59,15 +79,37 @@ export default function Home() {
               : "[ start a new token]"}
           </button>
         </div>
-        {showCreate && (
-          <List
-            toggleCreate={toggleCreate}
-            fee={fee}
-            provider={provider}
-            factory={factory}
-          />
-        )}
+        <div className="listings">
+          <h1>new listings</h1>
+          <div className="tokens">
+            {!account ? (
+              <p>please connect wallet</p>
+            ) : tokens.length === 0 ? (
+              <p>No tokens listed</p>
+            ) : (
+              tokens.map((token, index) => (
+                <Token toggleTrade={() => {}} token={token} key={index} />
+              ))
+            )}
+          </div>
+        </div>
       </main>
+      {showCreate && (
+        <List
+          toggleCreate={toggleCreate}
+          fee={fee}
+          provider={provider}
+          factory={factory}
+        />
+      )}
+
+      {showTrade && (
+        <Trade
+          toggleTrade={toggleTrade}
+          provider={provider}
+          factory={factory}
+        />
+      )}
     </div>
   );
 }
